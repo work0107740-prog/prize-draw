@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>체육센터 경품 추첨 참가자</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCgIw7RiYDzVnO8edBCuRfeKfgxLw25LBc",
+  authDomain: "sports-center-prize-draw-ae555.firebaseapp.com",
+  projectId: "sports-center-prize-draw-ae555",
+  storageBucket: "sports-center-prize-draw-ae555.firebasestorage.app",
+  messagingSenderId: "107629977957",
+  appId: "1:107629977957:web:e33fe98d7842c2af60c18c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const eventsRef = db.collection("events");
+</script>
+
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: Arial, "Noto Sans KR", sans-serif;
+    background: #f4f7fb;
+    color: #222;
+    text-align: center;
+}
+.container {
+    width: 92%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 28px 0 56px;
+}
+.card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    margin: 18px 0;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+h1 { font-size: 31px; margin: 8px 0 10px; }
+h2 { font-size: 22px; margin-top: 0; }
+h3 { margin-bottom: 8px; }
+.desc { color: #666; font-size: 15px; line-height: 1.55; }
+.form-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+input {
+    width: 100%;
+    max-width: 300px;
+    padding: 15px;
+    font-size: 18px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    text-align: center;
+    background: white;
+}
+input.small { max-width: 190px; }
+button {
+    border: none;
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 17px;
+    cursor: pointer;
+    margin: 6px;
+    background: #2f6fed;
+    color: white;
+    font-weight: bold;
+}
+button.secondary { background: #555; }
+button.danger { background: #d93025; }
+button.light { background: #e9edf5; color: #222; }
+button.green { background: #188038; }
+button.orange { background: #f29900; color: #222; }
+#result {
+    margin-top: 24px;
+    font-size: 54px;
+    font-weight: bold;
+    min-height: 72px;
+}
+.winner { color: #138a36; }
+.loser { color: #d93025; }
+.closed { color: #555; font-size: 42px !important; }
+.hidden { display: none; }
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+}
+.stat-box {
+    background: #f2f5fb;
+    border-radius: 14px;
+    padding: 18px 8px;
+}
+.stat-label { color: #555; font-size: 15px; font-weight: bold; }
+.stat-number { font-size: 34px; font-weight: bold; margin-top: 8px; }
+.list {
+    text-align: left;
+    max-height: 340px;
+    overflow-y: auto;
+    background: #f7f8fa;
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.notice { font-size: 14px; color: #777; margin-top: 10px; }
+.setting-box {
+    background: #f7f9fd;
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 12px;
+}
+.edit-box {
+    background: #fff7e8;
+    border: 1px solid #f0c36d;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 14px 0;
+    text-align: center;
+}
+.stats-panel {
+    background: #f9fbff;
+    border: 1px solid #dce6ff;
+    border-radius: 16px;
+    padding: 18px;
+    margin: 14px 0;
+}
+.badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #eef3ff;
+    color: #2f6fed;
+    font-weight: bold;
+    margin: 3px;
+    font-size: 14px;
+}
+.pool-item {
+    background: #f7f9fd;
+    border-radius: 14px;
+    padding: 14px;
+    margin: 10px 0;
+    text-align: left;
+}
+.pool-title {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+.pool-actions { margin-top: 10px; text-align: center; }
+.selected-pool { border: 2px solid #2f6fed; background: #eef3ff; }
+.top-actions { margin-top: 16px; }
+.participant-link-box {
+    width: 100%;
+    max-width: 100%;
+    background: #f7f8fa;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #555;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+    text-align: left;
+}
+@media (max-width: 560px) {
+    h1 { font-size: 25px; }
+    #result { font-size: 44px; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .card { padding: 20px 16px; }
+    button { width: 100%; max-width: 330px; }
+    input, input.small { max-width: 330px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>체육센터 경품 추첨</h1>
+
+    <div class="card">
+        <h2>참가자 확인</h2>
+        <div id="activePoolNotice" class="notice"></div>
+        <div class="form-row">
+            <input type="text" id="participantName" placeholder="이름 입력">
+            <input type="tel" id="phoneLast4" class="small" maxlength="4" placeholder="휴대폰 뒤 4자리">
+        </div>
+        <button onclick="joinDraw()">결과 확인</button>
+        <div id="result"></div>
+        <button id="surveyButton" class="secondary hidden" onclick="goSurvey()">확인</button>
+        <p id="message" class="notice"></p>
+    </div>
+</div>
+
+<script>
+
+function nowText() {
+    return new Date().toLocaleString("ko-KR");
+}
+function normalizeName(name) {
+    return String(name || "").trim().replace(/\s+/g, "");
+}
+function normalizePhone(phone) {
+    return String(phone || "").trim().replace(/\D/g, "");
+}
+function makeKey(name, phone) {
+    return normalizeName(name) + "_" + normalizePhone(phone);
+}
+function makeId() {
+    return "event_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+}
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+        [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
+    }
+    return array;
+}
+function buildResultPool(total, wins) {
+    let resultPool = [];
+    for (let i = 0; i < wins; i++) resultPool.push("당첨");
+    for (let i = 0; i < total - wins; i++) resultPool.push("꽝");
+    return shuffle(resultPool);
+}
+function buildRemainingPool(remainingWins, remainingLoses) {
+    let resultPool = [];
+    for (let i = 0; i < remainingWins; i++) resultPool.push("당첨");
+    for (let i = 0; i < remainingLoses; i++) resultPool.push("꽝");
+    return shuffle(resultPool);
+}
+function csvSafe(value) {
+    return String(value).replace(/"/g, '""');
+}
+function escapeHTML(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+const SURVEY_URL = "";
+const params = new URLSearchParams(location.search);
+const activeEventId = params.get("event") || "";
+let activeEvent = null;
+let unsubscribeEvent = null;
+
+function renderActiveNotice() {
+    const notice = document.getElementById("activePoolNotice");
+    notice.innerText = activeEvent
+        ? `사용 중인 이벤트: ${activeEvent.name}`
+        : "사용 가능한 이벤트가 없습니다. 관리자에게 참가자 링크를 다시 확인해 주세요.";
+}
+
+function startEventListener() {
+    if (!activeEventId) {
+        renderActiveNotice();
+        return;
+    }
+
+    unsubscribeEvent = eventsRef.doc(activeEventId).onSnapshot(doc => {
+        activeEvent = doc.exists ? doc.data() : null;
+        renderActiveNotice();
+    }, error => {
+        console.error(error);
+        alert("이벤트 정보를 불러오지 못했습니다.");
+    });
+}
+
+async function joinDraw() {
+    const nameInput = document.getElementById("participantName");
+    const phoneInput = document.getElementById("phoneLast4");
+    const resultBox = document.getElementById("result");
+    const message = document.getElementById("message");
+    const surveyButton = document.getElementById("surveyButton");
+
+    const displayName = nameInput.value.trim();
+    const phone = normalizePhone(phoneInput.value);
+    const key = makeKey(displayName, phone);
+
+    resultBox.className = "";
+    message.innerText = "";
+    surveyButton.classList.add("hidden");
+
+    if (!activeEventId) return alert("이벤트 링크가 올바르지 않습니다.");
+    if (!displayName) return alert("이름을 입력하세요.");
+    if (phone.length !== 4) return alert("휴대폰 뒤 4자리를 숫자로 입력하세요.");
+
+    const eventDocRef = eventsRef.doc(activeEventId);
+
+    try {
+        const output = await db.runTransaction(async transaction => {
+            const doc = await transaction.get(eventDocRef);
+            if (!doc.exists) throw new Error("이벤트가 존재하지 않습니다.");
+
+            const eventData = doc.data();
+            const participants = eventData.participants || {};
+            const history = eventData.history || [];
+            const resultPool = eventData.resultPool || [];
+
+            if (participants[key]) {
+                return {
+                    result: participants[key].result,
+                    message: "이미 참여한 정보입니다. 기존 결과를 다시 표시합니다."
+                };
+            }
+
+            if (resultPool.length === 0) {
+                return {
+                    result: "참여 마감",
+                    message: "준비된 결과표가 모두 사용되었습니다."
+                };
+            }
+
+            const assignedResult = resultPool.shift();
+
+            const record = {
+                name: displayName,
+                phone,
+                result: assignedResult,
+                time: nowText()
+            };
+
+            participants[key] = record;
+            history.push(record);
+
+            transaction.update(eventDocRef, {
+                participants,
+                history,
+                resultPool,
+                updatedAt: nowText()
+            });
+
+            return {
+                result: assignedResult,
+                message: ""
+            };
+        });
+
+        showResult(output.result);
+        message.innerText = output.message || "";
+        surveyButton.classList.remove("hidden");
+
+    } catch (error) {
+        console.error(error);
+        alert("오류가 발생했습니다. 관리자에게 문의해 주세요.");
+    }
+}
+
+function showResult(value) {
+    const resultBox = document.getElementById("result");
+
+    if (value === "당첨") {
+        resultBox.innerText = "🎉 당첨";
+        resultBox.className = "winner";
+    } else if (value === "꽝") {
+        resultBox.innerText = "😢 꽝";
+        resultBox.className = "loser";
+    } else {
+        resultBox.innerText = "참여 마감";
+        resultBox.className = "closed";
+    }
+}
+
+function goSurvey() {
+    if (SURVEY_URL) {
+        location.href = SURVEY_URL;
+    } else {
+        alert("현재는 설문조사 주소가 연결되어 있지 않습니다.");
+    }
+}
+
+document.getElementById("phoneLast4").addEventListener("input", function() {
+    this.value = this.value.replace(/\D/g, "").slice(0, 4);
+});
+
+startEventListener();
+</script>
+</body>
+</html>

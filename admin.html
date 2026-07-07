@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>체육센터 경품 추첨 관리자</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCgIw7RiYDzVnO8edBCuRfeKfgxLw25LBc",
+  authDomain: "sports-center-prize-draw-ae555.firebaseapp.com",
+  projectId: "sports-center-prize-draw-ae555",
+  storageBucket: "sports-center-prize-draw-ae555.firebasestorage.app",
+  messagingSenderId: "107629977957",
+  appId: "1:107629977957:web:e33fe98d7842c2af60c18c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const eventsRef = db.collection("events");
+</script>
+
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: Arial, "Noto Sans KR", sans-serif;
+    background: #f4f7fb;
+    color: #222;
+    text-align: center;
+}
+.container {
+    width: 92%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 28px 0 56px;
+}
+.card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    margin: 18px 0;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+h1 { font-size: 31px; margin: 8px 0 10px; }
+h2 { font-size: 22px; margin-top: 0; }
+h3 { margin-bottom: 8px; }
+.desc { color: #666; font-size: 15px; line-height: 1.55; }
+.form-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+input {
+    width: 100%;
+    max-width: 300px;
+    padding: 15px;
+    font-size: 18px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    text-align: center;
+    background: white;
+}
+input.small { max-width: 190px; }
+button {
+    border: none;
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 17px;
+    cursor: pointer;
+    margin: 6px;
+    background: #2f6fed;
+    color: white;
+    font-weight: bold;
+}
+button.secondary { background: #555; }
+button.danger { background: #d93025; }
+button.light { background: #e9edf5; color: #222; }
+button.green { background: #188038; }
+button.orange { background: #f29900; color: #222; }
+#result {
+    margin-top: 24px;
+    font-size: 54px;
+    font-weight: bold;
+    min-height: 72px;
+}
+.winner { color: #138a36; }
+.loser { color: #d93025; }
+.closed { color: #555; font-size: 42px !important; }
+.hidden { display: none; }
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+}
+.stat-box {
+    background: #f2f5fb;
+    border-radius: 14px;
+    padding: 18px 8px;
+}
+.stat-label { color: #555; font-size: 15px; font-weight: bold; }
+.stat-number { font-size: 34px; font-weight: bold; margin-top: 8px; }
+.list {
+    text-align: left;
+    max-height: 340px;
+    overflow-y: auto;
+    background: #f7f8fa;
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.notice { font-size: 14px; color: #777; margin-top: 10px; }
+.setting-box {
+    background: #f7f9fd;
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 12px;
+}
+.edit-box {
+    background: #fff7e8;
+    border: 1px solid #f0c36d;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 14px 0;
+    text-align: center;
+}
+.stats-panel {
+    background: #f9fbff;
+    border: 1px solid #dce6ff;
+    border-radius: 16px;
+    padding: 18px;
+    margin: 14px 0;
+}
+.badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #eef3ff;
+    color: #2f6fed;
+    font-weight: bold;
+    margin: 3px;
+    font-size: 14px;
+}
+.pool-item {
+    background: #f7f9fd;
+    border-radius: 14px;
+    padding: 14px;
+    margin: 10px 0;
+    text-align: left;
+}
+.pool-title {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+.pool-actions { margin-top: 10px; text-align: center; }
+.selected-pool { border: 2px solid #2f6fed; background: #eef3ff; }
+.top-actions { margin-top: 16px; }
+.participant-link-box {
+    width: 100%;
+    max-width: 100%;
+    background: #f7f8fa;
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #555;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+    text-align: left;
+}
+@media (max-width: 560px) {
+    h1 { font-size: 25px; }
+    #result { font-size: 44px; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .card { padding: 20px 16px; }
+    button { width: 100%; max-width: 330px; }
+    input, input.small { max-width: 330px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>체육센터 경품 추첨 관리자</h1>
+    <p class="desc">
+        결과표 생성, 수정, 삭제, 통계 확인을 하는 관리자 전용 화면입니다.<br>
+        고객에게는 반드시 <b>참가자 링크</b>만 공유하세요.
+    </p>
+
+    <div class="card">
+        <h2>결과표 만들기</h2>
+        <p class="desc">새로운 행사 결과표를 생성합니다.</p>
+        <div class="setting-box">
+            <div class="form-row">
+                <input type="text" id="poolName" placeholder="결과표 이름 예: 7월 이벤트">
+                <input type="number" id="totalSetting" min="1" max="1000" value="100" placeholder="총 결과표 개수">
+                <input type="number" id="winSetting" min="0" max="1000" value="10" placeholder="당첨 개수">
+            </div>
+            <p id="settingPreview" class="notice"></p>
+            <button class="green" onclick="createNewEvent()">결과표 생성</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>결과표 관리</h2>
+        <p class="desc">이벤트를 클릭하면 아래에 통계와 참가자 링크가 표시됩니다.</p>
+
+        <div id="editPanel" class="edit-box hidden">
+            <h3>결과표 수정하기</h3>
+            <div class="form-row">
+                <input type="text" id="editPoolName" placeholder="결과표 이름">
+                <input type="number" id="editTotalSetting" min="1" max="1000" placeholder="총 결과표 개수">
+                <input type="number" id="editWinSetting" min="0" max="1000" placeholder="당첨 개수">
+            </div>
+            <p id="editPreview" class="notice"></p>
+            <button class="orange" onclick="saveEditEvent()">수정 저장</button>
+            <button class="light" onclick="cancelEdit()">수정 취소</button>
+        </div>
+
+        <div id="poolList" class="list">불러오는 중...</div>
+
+        <div id="selectedStatsPanel" class="stats-panel hidden">
+            <h3>통계 자료</h3>
+            <div id="eventBadges"></div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">총 참여자</div>
+                    <div id="totalCount" class="stat-number">0/0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">당첨 지급</div>
+                    <div id="winCount" class="stat-number">0/0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">꽝 지급</div>
+                    <div id="loseCount" class="stat-number">0/0</div>
+                </div>
+            </div>
+
+            <div class="top-actions">
+                <button class="light" onclick="downloadCSV()">엑셀용 기록 다운로드</button>
+                <button class="green" onclick="copyParticipantLink()">참가자 링크 복사</button>
+            </div>
+
+            <div id="participantLinkText" class="participant-link-box"></div>
+
+            <h3>당첨자 명단</h3>
+            <div id="winnerList" class="list">당첨자가 없습니다.</div>
+
+            <h3>참여 기록</h3>
+            <div id="historyList" class="list">참여 기록이 없습니다.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+function nowText() {
+    return new Date().toLocaleString("ko-KR");
+}
+function normalizeName(name) {
+    return String(name || "").trim().replace(/\s+/g, "");
+}
+function normalizePhone(phone) {
+    return String(phone || "").trim().replace(/\D/g, "");
+}
+function makeKey(name, phone) {
+    return normalizeName(name) + "_" + normalizePhone(phone);
+}
+function makeId() {
+    return "event_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+}
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+        [array[i], array[randomIndex]] = [array[randomIndex], array[i]];
+    }
+    return array;
+}
+function buildResultPool(total, wins) {
+    let resultPool = [];
+    for (let i = 0; i < wins; i++) resultPool.push("당첨");
+    for (let i = 0; i < total - wins; i++) resultPool.push("꽝");
+    return shuffle(resultPool);
+}
+function buildRemainingPool(remainingWins, remainingLoses) {
+    let resultPool = [];
+    for (let i = 0; i < remainingWins; i++) resultPool.push("당첨");
+    for (let i = 0; i < remainingLoses; i++) resultPool.push("꽝");
+    return shuffle(resultPool);
+}
+function csvSafe(value) {
+    return String(value).replace(/"/g, '""');
+}
+function escapeHTML(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+let events = [];
+let selectedEventId = "";
+let editingEventId = "";
+let unsubscribeEvents = null;
+
+function getSelectedEvent() {
+    return events.find(event => event.id === selectedEventId) || null;
+}
+
+function getEventById(id) {
+    return events.find(event => event.id === id) || null;
+}
+
+function updateSettingPreview() {
+    const total = Number(document.getElementById("totalSetting").value);
+    const wins = Number(document.getElementById("winSetting").value);
+    const loses = total - wins;
+    const preview = document.getElementById("settingPreview");
+
+    if (!Number.isInteger(total) || !Number.isInteger(wins) || total <= 0 || wins < 0 || wins > total) {
+        preview.innerText = "총 결과표 개수와 당첨 개수를 올바르게 입력하세요.";
+        return;
+    }
+    preview.innerText = `총 결과표 ${total}개 / 당첨 ${wins}개 / 꽝 ${loses}개로 생성됩니다.`;
+}
+
+function updateEditPreview() {
+    const total = Number(document.getElementById("editTotalSetting").value);
+    const wins = Number(document.getElementById("editWinSetting").value);
+    const loses = total - wins;
+    const preview = document.getElementById("editPreview");
+
+    if (!Number.isInteger(total) || !Number.isInteger(wins) || total <= 0 || wins < 0 || wins > total) {
+        preview.innerText = "총 결과표 개수와 당첨 개수를 올바르게 입력하세요.";
+        return;
+    }
+    preview.innerText = `수정 후 총 결과표 ${total}개 / 당첨 ${wins}개 / 꽝 ${loses}개가 됩니다.`;
+}
+
+async function createNewEvent() {
+    const name = document.getElementById("poolName").value.trim() || "이름 없는 결과표";
+    const total = Number(document.getElementById("totalSetting").value);
+    const wins = Number(document.getElementById("winSetting").value);
+
+    if (!Number.isInteger(total) || total <= 0) return alert("총 결과표 개수는 1개 이상이어야 합니다.");
+    if (!Number.isInteger(wins) || wins < 0) return alert("당첨 개수는 0개 이상이어야 합니다.");
+    if (wins > total) return alert("당첨 개수는 총 결과표 개수보다 많을 수 없습니다.");
+
+    const id = makeId();
+
+    await eventsRef.doc(id).set({
+        id,
+        name,
+        total,
+        wins,
+        loses: total - wins,
+        resultPool: buildResultPool(total, wins),
+        participants: {},
+        history: [],
+        createdAt: nowText(),
+        updatedAt: nowText()
+    });
+
+    selectedEventId = id;
+    document.getElementById("poolName").value = "";
+    document.getElementById("totalSetting").value = 100;
+    document.getElementById("winSetting").value = 10;
+    updateSettingPreview();
+    alert("결과표가 생성되었습니다.");
+}
+
+function selectStatsEvent(id) {
+    selectedEventId = id;
+    cancelEdit();
+    renderAll();
+}
+
+function editEvent(id) {
+    const eventData = getEventById(id);
+    if (!eventData) return;
+
+    selectedEventId = id;
+    editingEventId = id;
+
+    document.getElementById("editPoolName").value = eventData.name;
+    document.getElementById("editTotalSetting").value = eventData.total;
+    document.getElementById("editWinSetting").value = eventData.wins;
+    document.getElementById("editPanel").classList.remove("hidden");
+
+    updateEditPreview();
+    renderAll();
+    document.getElementById("editPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function saveEditEvent() {
+    const eventData = getEventById(editingEventId);
+    if (!eventData) return;
+
+    const name = document.getElementById("editPoolName").value.trim() || "이름 없는 결과표";
+    const newTotal = Number(document.getElementById("editTotalSetting").value);
+    const newWins = Number(document.getElementById("editWinSetting").value);
+
+    if (!Number.isInteger(newTotal) || newTotal <= 0) return alert("총 결과표 개수는 1개 이상이어야 합니다.");
+    if (!Number.isInteger(newWins) || newWins < 0) return alert("당첨 개수는 0개 이상이어야 합니다.");
+    if (newWins > newTotal) return alert("당첨 개수는 총 결과표 개수보다 많을 수 없습니다.");
+
+    const history = eventData.history || [];
+    const usedTotal = history.length;
+    const usedWins = history.filter(item => item.result === "당첨").length;
+    const usedLoses = history.filter(item => item.result === "꽝").length;
+    const newLoses = newTotal - newWins;
+
+    if (newTotal < usedTotal) return alert(`이미 ${usedTotal}명이 참여했습니다. 총 결과표 개수는 ${usedTotal}개보다 작게 줄일 수 없습니다.`);
+    if (newWins < usedWins) return alert(`이미 당첨이 ${usedWins}명 지급되었습니다. 당첨 개수는 ${usedWins}개보다 작게 줄일 수 없습니다.`);
+    if (newLoses < usedLoses) return alert(`이미 꽝이 ${usedLoses}명 지급되었습니다. 꽝 개수는 ${usedLoses}개보다 작게 줄일 수 없습니다.`);
+
+    const remainingWins = newWins - usedWins;
+    const remainingLoses = newLoses - usedLoses;
+
+    await eventsRef.doc(eventData.id).update({
+        name,
+        total: newTotal,
+        wins: newWins,
+        loses: newLoses,
+        resultPool: buildRemainingPool(remainingWins, remainingLoses),
+        updatedAt: nowText()
+    });
+
+    cancelEdit();
+    alert("결과표가 수정되었습니다.");
+}
+
+function cancelEdit() {
+    editingEventId = "";
+    document.getElementById("editPanel").classList.add("hidden");
+    document.getElementById("editPoolName").value = "";
+    document.getElementById("editTotalSetting").value = "";
+    document.getElementById("editWinSetting").value = "";
+    document.getElementById("editPreview").innerText = "";
+}
+
+async function deleteEvent(id) {
+    const eventData = getEventById(id);
+    if (!eventData) return;
+
+    const ok = confirm(`"${eventData.name}" 결과표를 삭제할까요?\n참여 기록도 함께 삭제됩니다.`);
+    if (!ok) return;
+
+    await eventsRef.doc(id).delete();
+
+    if (selectedEventId === id) selectedEventId = "";
+    if (editingEventId === id) cancelEdit();
+    alert("결과표가 삭제되었습니다.");
+}
+
+function getParticipantLink(eventId) {
+    const base = location.href.substring(0, location.href.lastIndexOf("/") + 1);
+    return `${base}draw.html?event=${encodeURIComponent(eventId)}`;
+}
+
+function copyParticipantLink() {
+    const eventData = getSelectedEvent();
+    if (!eventData) return alert("선택된 결과표가 없습니다.");
+
+    const link = getParticipantLink(eventData.id);
+
+    navigator.clipboard.writeText(link).then(() => {
+        alert("참가자 링크가 복사되었습니다. 이 링크로 QR코드를 만들면 됩니다.");
+    }).catch(() => {
+        prompt("아래 링크를 복사하세요.", link);
+    });
+}
+
+function renderAll() {
+    renderEventList();
+    renderSelectedStats();
+}
+
+function renderEventList() {
+    const list = document.getElementById("poolList");
+
+    if (events.length === 0) {
+        list.innerHTML = "생성된 결과표가 없습니다.";
+        return;
+    }
+
+    list.innerHTML = events.map(eventData => {
+        const history = eventData.history || [];
+        const totalUsed = history.length;
+        const winUsed = history.filter(item => item.result === "당첨").length;
+        const loseUsed = history.filter(item => item.result === "꽝").length;
+        const selectedClass = eventData.id === selectedEventId ? "selected-pool" : "";
+
+        return `
+            <div class="pool-item ${selectedClass}" onclick="selectStatsEvent('${eventData.id}')">
+                <div class="pool-title">${escapeHTML(eventData.name)} ${eventData.id === selectedEventId ? "✅ 선택됨" : ""}</div>
+                <div>총 참여자: ${totalUsed}/${eventData.total}</div>
+                <div>당첨 지급: ${winUsed}/${eventData.wins}</div>
+                <div>꽝 지급: ${loseUsed}/${eventData.loses}</div>
+                <div class="notice">생성: ${eventData.createdAt} / 수정: ${eventData.updatedAt}</div>
+                <div class="pool-actions" onclick="event.stopPropagation()">
+                    <button class="green" onclick="window.open('${getParticipantLink(eventData.id)}','_blank')">사용하기</button>
+                    <button class="orange" onclick="editEvent('${eventData.id}')">수정하기</button>
+                    <button class="danger" onclick="deleteEvent('${eventData.id}')">삭제하기</button>
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
+function renderSelectedStats() {
+    const eventData = getSelectedEvent();
+    const panel = document.getElementById("selectedStatsPanel");
+
+    if (!eventData) {
+        panel.classList.add("hidden");
+        return;
+    }
+
+    panel.classList.remove("hidden");
+
+    const history = eventData.history || [];
+    const totalParticipants = history.length;
+    const wins = history.filter(item => item.result === "당첨").length;
+    const loses = history.filter(item => item.result === "꽝").length;
+    const winners = history.filter(item => item.result === "당첨");
+
+    document.getElementById("totalCount").innerText = `${totalParticipants}/${eventData.total}`;
+    document.getElementById("winCount").innerText = `${wins}/${eventData.wins}`;
+    document.getElementById("loseCount").innerText = `${loses}/${eventData.loses}`;
+
+    document.getElementById("eventBadges").innerHTML = `
+        <span class="badge">${escapeHTML(eventData.name)}</span>
+        <span class="badge">총 결과표 ${eventData.total}개</span>
+        <span class="badge">당첨 ${eventData.wins}개</span>
+        <span class="badge">꽝 ${eventData.loses}개</span>
+        <span class="badge">생성일 ${eventData.createdAt}</span>
+    `;
+
+    document.getElementById("participantLinkText").innerText = `참가자 링크: ${getParticipantLink(eventData.id)}`;
+
+    document.getElementById("winnerList").innerHTML = winners.length === 0
+        ? "당첨자가 없습니다."
+        : winners.map((item, index) => `${index + 1}. ${escapeHTML(item.name)} / ${item.phone} / ${item.time}`).join("<br>");
+
+    document.getElementById("historyList").innerHTML = history.length === 0
+        ? "참여 기록이 없습니다."
+        : history.map((item, index) => `${index + 1}. ${escapeHTML(item.name)} / ${item.phone} / ${item.result} <span style="color:#777;">(${item.time})</span>`).join("<br>");
+}
+
+function downloadCSV() {
+    const eventData = getSelectedEvent();
+    if (!eventData) return alert("선택된 결과표가 없습니다.");
+
+    const history = eventData.history || [];
+    if (history.length === 0) return alert("다운로드할 참여 기록이 없습니다.");
+
+    let csv = "\ufeff결과표명,순번,이름,휴대폰뒤4자리,결과,참여시간\n";
+
+    history.forEach((item, index) => {
+        csv += `"${csvSafe(eventData.name)}",${index + 1},"${csvSafe(item.name)}","${item.phone}","${item.result}","${item.time}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const safeName = eventData.name.replace(/[\\/:*?"<>|]/g, "_");
+    const now = new Date();
+    const fileDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `체육센터_경품추첨_${safeName}_${fileDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function startRealtimeListener() {
+    if (unsubscribeEvents) unsubscribeEvents();
+
+    unsubscribeEvents = eventsRef.onSnapshot(snapshot => {
+        events = snapshot.docs.map(doc => doc.data());
+        events.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+        if (!selectedEventId && events.length > 0) selectedEventId = events[0].id;
+        if (selectedEventId && !events.find(eventData => eventData.id === selectedEventId)) {
+            selectedEventId = events.length > 0 ? events[0].id : "";
+        }
+
+        renderAll();
+    }, error => {
+        console.error(error);
+        alert("Firebase 데이터를 불러오지 못했습니다. Firestore 규칙을 확인해 주세요.");
+    });
+}
+
+document.getElementById("totalSetting").addEventListener("input", updateSettingPreview);
+document.getElementById("winSetting").addEventListener("input", updateSettingPreview);
+document.getElementById("editTotalSetting").addEventListener("input", updateEditPreview);
+document.getElementById("editWinSetting").addEventListener("input", updateEditPreview);
+
+updateSettingPreview();
+startRealtimeListener();
+</script>
+</body>
+</html>
